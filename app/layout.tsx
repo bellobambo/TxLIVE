@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "TxLIVE — Solana verified football predictions",
+  title: "TxLIVE",
   description: "Free-to-play World Cup predictions powered by TxLINE data.",
 };
 
