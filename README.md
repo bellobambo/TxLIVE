@@ -16,7 +16,7 @@ The core of TxLIVE relies on **TxLINE** by TxODDS. The platform uses TxLINE's cr
 
 1. **Oracle Synchronization:** TxLIVE continuously pulls live Match Fixtures and cryptographically signed Match Events via the TxLINE Oracle API.
 2. **Create a Challenge (Escrow Initiation):** User A (The Challenger) selects an upcoming match, picks a winning team, and locks their stake (e.g., 2.5 SOL) into the decentralized escrow contract. The protocol generates a unique, shareable challenge link.
-3. **Match the Challenge (P2P Lock):** User A sends the link to a friend (User B). User B connects their wallet, is forced to take the opposing side of the prediction, and matches the 2.5 SOL stake. The contract is now locked with 5.0 SOL.
+3. **Match the Challenge (P2P Lock):** User A sends the link to a friend (User B). User B connects their wallet, the option picked by User A is disabled, and User B chooses their prediction from the remaining options (e.g. the opposite team or Draw). They then match the exact 2.5 SOL stake. The contract is now locked with a 5.0 SOL pool.
 4. **Trustless Resolution:** As the match plays out, live events stream directly to the dashboard. Once the final whistle blows, TxLINE broadcasts the final score alongside a cryptographic Merkle root. The smart contract validates this proof on-chain and instantly distributes the entire 5.0 SOL pool to the winner.
 
 ## ✨ Key Features

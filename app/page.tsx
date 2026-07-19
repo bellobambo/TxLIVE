@@ -267,24 +267,38 @@ export default function Home() {
                       <b>{incomingChallenge.amount} SOL</b>
                     </div>
                   </div>
+                  <div style={{ marginBottom: '15px' }}>
+                    <span style={{ fontSize: '12px', color: '#7b857e', display: 'block', marginBottom: '8px' }}>CHOOSE YOUR SIDE TO MATCH</span>
+                    <div className="pick-list">
+                      {[
+                        { label: liveMatch ? (liveMatch.Participant1IsHome ? liveMatch.Participant1 : liveMatch.Participant2) : "Home", tone: "orange" },
+                        { label: "Draw", tone: "blue" },
+                        { label: liveMatch ? (liveMatch.Participant1IsHome ? liveMatch.Participant2 : liveMatch.Participant1) : "Away", tone: "violet" }
+                      ].map((choice) => (
+                        <button 
+                          key={choice.label} 
+                          onClick={() => { if (!wallet) return alert("Please connect your wallet first!"); setWagerSide(choice.label); }} 
+                          disabled={choice.label === incomingChallenge.side}
+                          style={{ color: '#0B1849', background: choice.label === incomingChallenge.side ? '#e3d2bc' : 'white', opacity: choice.label === incomingChallenge.side ? 0.7 : 1, cursor: choice.label === incomingChallenge.side ? 'not-allowed' : 'pointer', textDecoration: choice.label === incomingChallenge.side ? 'line-through' : 'none' }}
+                          className={`pick ${choice.tone} ${wagerSide === choice.label ? "selected" : ""}`}
+                        >
+                          <span>{choice.label}</span><i>{wagerSide === choice.label ? "✓" : ""}</i>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <button
+                    disabled={(!wagerSide && wallet !== "") || wagerStatus === "creating"}
                     className="submit"
                     onClick={() => {
-                      const homeTeam = liveMatch.Participant1IsHome ? liveMatch.Participant1 : liveMatch.Participant2;
-                      const awayTeam = liveMatch.Participant1IsHome ? liveMatch.Participant2 : liveMatch.Participant1;
-                      
-                      let oppositeSide = "Draw";
-                      if (incomingChallenge.side === homeTeam) oppositeSide = awayTeam;
-                      else if (incomingChallenge.side === awayTeam) oppositeSide = homeTeam;
-                      else if (incomingChallenge.side === "Draw") oppositeSide = "Any Winner";
-                      
-                      setWagerSide(oppositeSide);
+                      if (!wallet) return connectWallet();
                       setStakeAmount(incomingChallenge.amount);
                       setWagerStatus("creating");
                       setTimeout(() => setWagerStatus("locked"), 1500);
                     }}
                   >
-                    Match Challenge ({incomingChallenge.amount} SOL)
+                    {wagerStatus === "creating" ? "Approving Transaction..." : !wallet ? "Connect Wallet to Match" : wagerSide ? `Match Challenge (${incomingChallenge.amount} SOL)` : "Select a team to match"}
                   </button>
                 </div>
               ) : (
@@ -295,7 +309,7 @@ export default function Home() {
                       { label: "Draw", tone: "blue" },
                       { label: liveMatch ? (liveMatch.Participant1IsHome ? liveMatch.Participant2 : liveMatch.Participant1) : "Away", tone: "violet" }
                     ].map((choice) => (
-                      <button key={choice.label} onClick={() => setWagerSide(choice.label)} className={`pick ${choice.tone} ${wagerSide === choice.label ? "selected" : ""}`}>
+                      <button key={choice.label} onClick={() => { if (!wallet) return alert("Please connect your wallet first!"); setWagerSide(choice.label); }} className={`pick ${choice.tone} ${wagerSide === choice.label ? "selected" : ""}`}>
                         <span>{choice.label}</span><i>{wagerSide === choice.label ? "✓" : ""}</i>
                       </button>
                     ))}
@@ -310,9 +324,10 @@ export default function Home() {
                   </div>
 
                   <button
-                    disabled={!wagerSide || wagerStatus === "creating"}
+                    disabled={(!wagerSide && wallet !== "") || wagerStatus === "creating"}
                     className="submit"
                     onClick={() => {
+                      if (!wallet) return connectWallet();
                       setWagerStatus("creating");
                       setTimeout(() => {
                         setWagerStatus("locked");
@@ -322,7 +337,7 @@ export default function Home() {
                       }, 1500);
                     }}
                   >
-                    {wagerStatus === "creating" ? "Approving Transaction..." : wagerSide ? `Lock ${stakeAmount} SOL on ${wagerSide}` : "Select a team to challenge"}
+                    {wagerStatus === "creating" ? "Approving Transaction..." : !wallet ? "Connect Wallet to Challenge" : wagerSide ? `Lock ${stakeAmount} SOL on ${wagerSide}` : "Select a team to challenge"}
                   </button>
                 </>
               )}
@@ -348,7 +363,7 @@ export default function Home() {
               )}
 
             </div>
-            <aside className="event-card"><div className="card-top"><span className="label">VERIFIED TIMELINE</span><div>{streamState === "demo" && <button onClick={simulateMatch} style={{ background: '#0B1849', color: '#F1DEC4', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer', marginRight: '8px' }}>▶ SIMULATE</button>}<span className="verified">✦ signed</span></div></div>{events.length > 0 ? events.map((event, index) => <div className="event" key={`${event.minute}-${index}`}><time>{event.minute}</time><span className={`event-icon ${event.team}`}>{event.title === "GOAL" ? "⚽" : event.title === "Yellow card" ? "▰" : "·"}</span><div><b>{event.title}</b><p>{event.detail}</p>{event.seq && <button onClick={() => liveMatch && validateProof(liveMatch.FixtureId, event.seq)} className="verify-btn" style={{ fontSize: '10px', padding: '2px 6px', marginTop: '4px', background: '#242625', border: '1px solid #3d423e', color: '#a7e1b5', borderRadius: '4px', cursor: 'pointer' }}>{validating ? 'Validating...' : 'Verify On-Chain ↗'}</button>}</div></div>) : <div className="event"><p>No live data yet.</p></div>}<button className="full-timeline">View full match timeline →</button></aside>
+            <aside className="event-card"><div className="card-top"><span className="label">VERIFIED TIMELINE</span><div>{streamState === "demo" && <button onClick={simulateMatch} style={{ background: '#0B1849', color: '#F1DEC4', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer', marginRight: '8px' }}>▶ SIMULATE</button>}<span className="verified">✦ signed</span></div></div>{events.length > 0 ? events.map((event, index) => <div className="event" key={`${event.minute}-${index}`}><time>{event.minute}</time><span className={`event-icon ${event.team}`}>{event.title === "GOAL" ? "⚽" : event.title === "Yellow card" ? "▰" : "·"}</span><div><b>{event.title}</b><p>{event.detail}</p>{event.seq && <button onClick={() => liveMatch && validateProof(liveMatch.FixtureId, event.seq)} className="verify-btn" style={{ fontSize: '10px', padding: '2px 6px', marginTop: '4px', background: '#242625', border: '1px solid #3d423e', color: '#a7e1b5', borderRadius: '4px', cursor: 'pointer' }}>{validating ? 'Validating...' : 'Verify On-Chain ↗'}</button>}</div></div>) : <div className="event"><p>No live data yet.</p></div>}</aside>
           </div>
 
           {proofData && (
