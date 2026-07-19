@@ -55,7 +55,7 @@ export default function Home() {
 
   const simulateMatch = () => {
     setFixtures(prev => prev.map(f => f.FixtureId === selectedFixtureId ? { ...f, MatchStatus: "Live", MatchTime: "1", HomeScore: 0, AwayScore: 0 } : f));
-    
+
     const fakeEvents = [
       { minute: "1'", title: "Match Started", detail: "TxLINE signed kickoff payload", team: "system", seq: 84319 },
       { minute: "24'", title: "Yellow card", detail: "TxLINE signed booking payload", team: "away", seq: 84320 },
@@ -69,7 +69,7 @@ export default function Home() {
         const ev = fakeEvents[i];
         setEvents(current => [ev as any, ...current].slice(0, 5));
         if (ev.scoreUpdate) {
-           setFixtures(prev => prev.map(f => f.FixtureId === selectedFixtureId ? { ...f, HomeScore: ev.scoreUpdate[0], AwayScore: ev.scoreUpdate[1] } : f));
+          setFixtures(prev => prev.map(f => f.FixtureId === selectedFixtureId ? { ...f, HomeScore: ev.scoreUpdate[0], AwayScore: ev.scoreUpdate[1] } : f));
         }
         i++;
       } else {
@@ -180,7 +180,7 @@ export default function Home() {
 
       {currentView === "hero" && (
         <section id="top" className="hero wrap">
-          <span className="pulse" /> <i /> <i> SOLANA-ANCHORED SPORTS DATA</i>
+          <span className="pulse" /> <i /> <i> SOLANA SPORTS DATA</i>
           <h1>Winner takes all.<br /><em>Peer-to-peer challenges.</em></h1>
           <p>Lock your stake against another player in a smart contract. When the match ends, TxLINE's cryptographic oracle automatically pays the winner. No house, no limits.</p>
           <div className="hero-actions">
@@ -275,9 +275,9 @@ export default function Home() {
                         { label: "Draw", tone: "blue" },
                         { label: liveMatch ? (liveMatch.Participant1IsHome ? liveMatch.Participant2 : liveMatch.Participant1) : "Away", tone: "violet" }
                       ].map((choice) => (
-                        <button 
-                          key={choice.label} 
-                          onClick={() => { if (!wallet) return alert("Please connect your wallet first!"); setWagerSide(choice.label); }} 
+                        <button
+                          key={choice.label}
+                          onClick={() => { if (!wallet) return alert("Please connect your wallet first!"); setWagerSide(choice.label); }}
                           disabled={choice.label === incomingChallenge.side}
                           style={{ color: '#0B1849', background: choice.label === incomingChallenge.side ? '#e3d2bc' : 'white', opacity: choice.label === incomingChallenge.side ? 0.7 : 1, cursor: choice.label === incomingChallenge.side ? 'not-allowed' : 'pointer', textDecoration: choice.label === incomingChallenge.side ? 'line-through' : 'none' }}
                           className={`pick ${choice.tone} ${wagerSide === choice.label ? "selected" : ""}`}
