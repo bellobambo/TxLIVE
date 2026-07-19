@@ -1,0 +1,452 @@
+{
+  "address": "982tMZQ8BvSDKDvT4DwwdkzE2KuvX7UTnz8t4TedM9CF",
+  "metadata": {
+    "name": "txlive",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "cancel_challenge",
+      "discriminator": [
+        231,
+        253,
+        0,
+        151,
+        179,
+        94,
+        5,
+        152
+      ],
+      "accounts": [
+        {
+          "name": "challenge_escrow",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  104,
+                  97,
+                  108,
+                  108,
+                  101,
+                  110,
+                  103,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "challenge_escrow.creator",
+                "account": "ChallengeEscrow"
+              },
+              {
+                "kind": "account",
+                "path": "challenge_escrow.fixture_id",
+                "account": "ChallengeEscrow"
+              }
+            ]
+          }
+        },
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "challenge_escrow"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "claim_winnings",
+      "discriminator": [
+        161,
+        215,
+        24,
+        59,
+        14,
+        236,
+        242,
+        221
+      ],
+      "accounts": [
+        {
+          "name": "challenge_escrow",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  104,
+                  97,
+                  108,
+                  108,
+                  101,
+                  110,
+                  103,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "challenge_escrow.creator",
+                "account": "ChallengeEscrow"
+              },
+              {
+                "kind": "account",
+                "path": "challenge_escrow.fixture_id",
+                "account": "ChallengeEscrow"
+              }
+            ]
+          }
+        },
+        {
+          "name": "claimer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "destination",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize_challenge",
+      "discriminator": [
+        131,
+        92,
+        76,
+        227,
+        13,
+        71,
+        164,
+        243
+      ],
+      "accounts": [
+        {
+          "name": "challenge_escrow",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  104,
+                  97,
+                  108,
+                  108,
+                  101,
+                  110,
+                  103,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "creator"
+              },
+              {
+                "kind": "arg",
+                "path": "fixture_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "fixture_id",
+          "type": "u64"
+        },
+        {
+          "name": "creator_pick",
+          "type": "string"
+        },
+        {
+          "name": "stake_amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "match_challenge",
+      "discriminator": [
+        112,
+        77,
+        241,
+        236,
+        33,
+        159,
+        43,
+        74
+      ],
+      "accounts": [
+        {
+          "name": "challenge_escrow",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  104,
+                  97,
+                  108,
+                  108,
+                  101,
+                  110,
+                  103,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "challenge_escrow.creator",
+                "account": "ChallengeEscrow"
+              },
+              {
+                "kind": "account",
+                "path": "challenge_escrow.fixture_id",
+                "account": "ChallengeEscrow"
+              }
+            ]
+          }
+        },
+        {
+          "name": "opponent",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "opponent_pick",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "resolve_challenge",
+      "discriminator": [
+        81,
+        191,
+        124,
+        119,
+        131,
+        248,
+        157,
+        109
+      ],
+      "accounts": [
+        {
+          "name": "challenge_escrow",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  104,
+                  97,
+                  108,
+                  108,
+                  101,
+                  110,
+                  103,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "challenge_escrow.creator",
+                "account": "ChallengeEscrow"
+              },
+              {
+                "kind": "account",
+                "path": "challenge_escrow.fixture_id",
+                "account": "ChallengeEscrow"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "winning_side",
+          "type": "string"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "ChallengeEscrow",
+      "discriminator": [
+        72,
+        143,
+        164,
+        134,
+        26,
+        180,
+        123,
+        184
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "ChallengeNotOpen",
+      "msg": "Challenge is not in the Open state."
+    },
+    {
+      "code": 6001,
+      "name": "ChallengeNotLocked",
+      "msg": "Challenge is not in the Locked state."
+    },
+    {
+      "code": 6002,
+      "name": "ChallengeNotResolved",
+      "msg": "Challenge has not been resolved yet."
+    },
+    {
+      "code": 6003,
+      "name": "InvalidState",
+      "msg": "Invalid state encountered."
+    },
+    {
+      "code": 6004,
+      "name": "InvalidOpponent",
+      "msg": "Opponent does not match the challenge opponent."
+    },
+    {
+      "code": 6005,
+      "name": "InvalidClaimer",
+      "msg": "You are not authorized to claim this challenge."
+    },
+    {
+      "code": 6006,
+      "name": "NotWinner",
+      "msg": "You did not win this challenge."
+    },
+    {
+      "code": 6007,
+      "name": "AlreadyClaimed",
+      "msg": "You have already claimed your winnings."
+    }
+  ],
+  "types": [
+    {
+      "name": "ChallengeEscrow",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "opponent",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "fixture_id",
+            "type": "u64"
+          },
+          {
+            "name": "creator_pick",
+            "type": "string"
+          },
+          {
+            "name": "opponent_pick",
+            "type": {
+              "option": "string"
+            }
+          },
+          {
+            "name": "stake_amount",
+            "type": "u64"
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "ChallengeStatus"
+              }
+            }
+          },
+          {
+            "name": "creator_claimed",
+            "type": "bool"
+          },
+          {
+            "name": "opponent_claimed",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ChallengeStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Open"
+          },
+          {
+            "name": "Locked"
+          },
+          {
+            "name": "CreatorWon"
+          },
+          {
+            "name": "OpponentWon"
+          },
+          {
+            "name": "Draw"
+          },
+          {
+            "name": "Cancelled"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -10,6 +10,8 @@ const apiOrigins: Record<TxlineNetwork, string> = {
   mainnet: "https://txline.txodds.com",
 };
 
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+import { Keypair, PublicKey, Transaction, Connection } from "@solana/web3.js";
 import { Buffer } from "buffer";
 
 function toBase64(bytes: any) {

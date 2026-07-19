@@ -1,6 +1,24 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react/no-unescaped-entities, react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Connection, PublicKey, SystemProgram } from '@solana/web3.js';
+import { Program, AnchorProvider, Idl, BN } from '@coral-xyz/anchor';
+import idl from './idl.json';
+
+const programId = new PublicKey("982tMZQ8BvSDKDvT4DwwdkzE2KuvX7UTnz8t4TedM9CF");
+const connection = new Connection("https://api.devnet.solana.com");
+
+const getChallengePDA = (creatorPubkey: PublicKey, fixtureId: number) => {
+  return PublicKey.findProgramAddressSync(
+    [
+      Buffer.from("challenge"),
+      creatorPubkey.toBuffer(),
+      new BN(fixtureId).toArrayLike(Buffer, "le", 8),
+    ],
+    programId
+  );
+};
 
 type FeedEvent = { minute: string; title: string; detail: string; team: "home" | "away" | "system"; seq?: number };
 
@@ -22,6 +40,8 @@ const getFlagUrl = (country: string) => {
 export default function Home() {
   const [currentView, setCurrentView] = useState<"hero" | "dashboard" | "how" | "fixtures">("hero");
   const [wallet, setWallet] = useState<string | null>(null);
+  const [provider, setProvider] = useState<AnchorProvider | null>(null);
+  const [balance, setBalance] = useState<number | null>(null);
   const [wagerSide, setWagerSide] = useState<string | null>(null);
   const [stakeAmount, setStakeAmount] = useState<string>("1.0");
   const [wagerStatus, setWagerStatus] = useState<"idle" | "creating" | "locked">("idle");
@@ -79,6 +99,16 @@ export default function Home() {
   };
 
   useEffect(() => {
+    const phantom = window.phantom?.solana;
+    if (phantom?.isPhantom) {
+      phantom.connect({ onlyIfTrusted: true }).then((response: any) => {
+        setWallet(response.publicKey.toString());
+        const anchorProvider = new AnchorProvider(connection, phantom as any, { preflightCommitment: "processed" });
+        setProvider(anchorProvider);
+        connection.getBalance(new PublicKey(response.publicKey.toString())).then(bal => setBalance(bal / 1e9));
+      }).catch(() => {});
+    }
+
     // Check for incoming shared wager link
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
@@ -99,16 +129,41 @@ export default function Home() {
 
     const source = new EventSource("/api/txline/scores");
     source.onopen = () => setStreamState("live");
-    source.addEventListener("score", (message) => {
+    source.onmessage = (message) => {
       try {
-        const data = JSON.parse(message.data) as Record<string, unknown>;
-        // Filter live events by the currently featured match
-        setEvents((current) => {
-          const nextEvent: FeedEvent = { minute: String(data.minute ?? "NOW"), title: String(data.eventType ?? "Update"), detail: "TxLINE signed payload", team: "system", seq: data.seq as number };
-          return [nextEvent, ...current].slice(0, 5);
-        });
+        const data = JSON.parse(message.data);
+        if (data.FixtureId) {
+          const action = data.Action || "Update";
+          const minute = data.Clock?.Seconds ? Math.floor(data.Clock.Seconds / 60) + "'" : "NOW";
+          const team = data.Participant === 1 ? "home" : data.Participant === 2 ? "away" : "system";
+
+          setEvents((current) => {
+            const nextEvent: FeedEvent = { 
+              minute, 
+              title: action.replace(/_/g, ' ').toUpperCase(), 
+              detail: "TxLINE signed payload", 
+              team: team as "home" | "away" | "system", 
+              seq: data.Seq 
+            };
+            return [nextEvent, ...current].slice(0, 5);
+          });
+
+          // In TxOdds stats, "1" is often home score, "2" is away score
+          const homeScore = data.Stats && "1" in data.Stats ? data.Stats["1"] : data.HomeScore;
+          const awayScore = data.Stats && "2" in data.Stats ? data.Stats["2"] : data.AwayScore;
+
+          if (homeScore !== undefined || awayScore !== undefined) {
+            setFixtures(prev => prev.map(f => 
+              f.FixtureId === data.FixtureId 
+                ? { ...f, HomeScore: homeScore ?? f.HomeScore, AwayScore: awayScore ?? f.AwayScore } 
+                : f
+            ));
+          }
+        }
       } catch { }
-    });
+    };
+    // Ignore heartbeat events to avoid errors
+    source.addEventListener("heartbeat", () => {});
     source.addEventListener("status", (message) => {
       if (message.data === "configured") setStreamState("connecting");
     });
@@ -119,10 +174,13 @@ export default function Home() {
   const streamLabel = useMemo(() => ({ demo: "DEMO FEED", connecting: "CONNECTING", live: "TXLINE LIVE" })[streamState], [streamState]);
 
   async function connectWallet() {
-    const provider = window.phantom?.solana;
-    if (!provider) return window.open("https://phantom.app/", "_blank", "noopener,noreferrer");
-    const response = await provider.connect();
+    const phantom = window.phantom?.solana;
+    if (!phantom) return window.open("https://phantom.app/", "_blank", "noopener,noreferrer");
+    const response = await phantom.connect();
     setWallet(response.publicKey.toString());
+    const anchorProvider = new AnchorProvider(connection, phantom as any, { preflightCommitment: "processed" });
+    setProvider(anchorProvider);
+    connection.getBalance(new PublicKey(response.publicKey.toString())).then(bal => setBalance(bal / 1e9));
   }
 
   const liveMatch = fixtures.find(f => f.FixtureId === selectedFixtureId) || fixtures[0];
@@ -174,7 +232,7 @@ export default function Home() {
               {streamState === "demo" ? "Switch to Live" : "Switch to Demo"}
             </button>
           </div>
-          <button className="wallet-button" onClick={connectWallet}>{wallet ? shorten(wallet) : "Connect wallet"}<span>↗</span></button>
+          <button className="wallet-button" onClick={connectWallet}>{wallet ? `${shorten(wallet)} ${balance !== null ? `(${balance.toFixed(2)} SOL)` : ''}` : "Connect wallet"}<span>↗</span></button>
         </div>
       </nav>
 
@@ -194,7 +252,7 @@ export default function Home() {
         <section className="wrap dashboard" id="match">
           {liveMatch ? (
             <>
-              <div className="section-heading"><div><span className="label">FEATURED MATCH</span><h2>{liveMatch.Participant1IsHome ? liveMatch.Participant1 : liveMatch.Participant2} <span>vs</span> {liveMatch.Participant1IsHome ? liveMatch.Participant2 : liveMatch.Participant1}</h2></div><div className="match-time"><b>{new Date(liveMatch.StartTime).toLocaleDateString()}</b><span><i /> {liveMatch.Competition || "World Cup"}</span></div></div>
+              <div className="section-heading"><div><span className="label">FEATURED MATCH</span><h2>{liveMatch.Participant1IsHome ? liveMatch.Participant1 : liveMatch.Participant2} <span>vs</span> {liveMatch.Participant1IsHome ? liveMatch.Participant2 : liveMatch.Participant1}</h2></div><div className="match-time"><b>{new Date(liveMatch.StartTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</b><div style={{ fontSize: '16px', fontWeight: 'bold', color: '#7b857e', marginBottom: '4px' }}>{new Date(liveMatch.StartTime).toLocaleDateString()}</div><span><i /> {liveMatch.Competition || "World Cup"}</span></div></div>
               <div className="score-panel">
                 <div className="team home">
                   <div className="crest" style={{ background: getFlagUrl(liveMatch.Participant1IsHome ? liveMatch.Participant1 : liveMatch.Participant2) ? 'transparent' : '#0B1849', overflow: 'hidden', border: '1px solid #0B1849', borderRadius: getFlagUrl(liveMatch.Participant1IsHome ? liveMatch.Participant1 : liveMatch.Participant2) ? '4px' : '50%', width: getFlagUrl(liveMatch.Participant1IsHome ? liveMatch.Participant1 : liveMatch.Participant2) ? '65px' : '51px', height: getFlagUrl(liveMatch.Participant1IsHome ? liveMatch.Participant1 : liveMatch.Participant2) ? '45px' : '51px' }}>
@@ -206,7 +264,7 @@ export default function Home() {
                   </div>
                   <b>{liveMatch.Participant1IsHome ? liveMatch.Participant1 : liveMatch.Participant2}</b>
                 </div>
-                <div className="score"><strong>- <i>—</i> -</strong><span style={{ marginTop: '8px' }}>{new Date(liveMatch.StartTime).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span></div>
+                <div className="score"><strong>{liveMatch.HomeScore ?? '-'} <i>—</i> {liveMatch.AwayScore ?? '-'}</strong><span style={{ marginTop: '8px' }}>{new Date(liveMatch.StartTime).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span></div>
                 <div className="team away">
                   <div className="crest" style={{ background: getFlagUrl(liveMatch.Participant1IsHome ? liveMatch.Participant2 : liveMatch.Participant1) ? 'transparent' : '#0B1849', overflow: 'hidden', border: '1px solid #0B1849', borderRadius: getFlagUrl(liveMatch.Participant1IsHome ? liveMatch.Participant2 : liveMatch.Participant1) ? '4px' : '50%', width: getFlagUrl(liveMatch.Participant1IsHome ? liveMatch.Participant2 : liveMatch.Participant1) ? '65px' : '51px', height: getFlagUrl(liveMatch.Participant1IsHome ? liveMatch.Participant2 : liveMatch.Participant1) ? '45px' : '51px' }}>
                     {getFlagUrl(liveMatch.Participant1IsHome ? liveMatch.Participant2 : liveMatch.Participant1) ? (
@@ -255,7 +313,7 @@ export default function Home() {
                 <div className="incoming-challenge" style={{ background: '#0B1849', color: '#F1DEC4', padding: '15px', borderRadius: '8px', border: '2px solid #F1DEC4' }}>
                   <div style={{ marginBottom: '15px' }}>
                     <span style={{ fontSize: '12px', color: '#7b857e' }}>CHALLENGER WALLET</span>
-                    <div style={{ fontSize: '14px', fontWeight: 'bold' }}>{incomingChallenge.creator}</div>
+                    <div style={{ fontSize: '14px', fontWeight: 'bold' }}>{shorten(incomingChallenge.creator)}</div>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', background: '#0d0e0e', padding: '10px', borderRadius: '4px' }}>
                     <div>
@@ -291,11 +349,31 @@ export default function Home() {
                   <button
                     disabled={(!wagerSide && wallet !== "") || wagerStatus === "creating"}
                     className="submit"
-                    onClick={() => {
+                    onClick={async () => {
                       if (!wallet) return connectWallet();
+                      if (!provider) return alert("Wallet not connected completely");
                       setStakeAmount(incomingChallenge.amount);
                       setWagerStatus("creating");
-                      setTimeout(() => setWagerStatus("locked"), 1500);
+                      try {
+                        const program = new Program(idl as Idl, provider);
+                        const creatorPubkey = new PublicKey(incomingChallenge.creator);
+                        const [escrowPDA] = getChallengePDA(creatorPubkey, incomingChallenge.fixtureId);
+
+                        await program.methods
+                          .matchChallenge(wagerSide!)
+                          .accounts({
+                            challengeEscrow: escrowPDA,
+                            opponent: provider.wallet.publicKey,
+                            systemProgram: SystemProgram.programId,
+                          } as any)
+                          .rpc();
+
+                        setWagerStatus("locked");
+                      } catch (err: any) {
+                        console.error("Match error:", err);
+                        setWagerStatus("idle");
+                        alert("Transaction failed: " + err.message);
+                      }
                     }}
                   >
                     {wagerStatus === "creating" ? "Approving Transaction..." : !wallet ? "Connect Wallet to Match" : wagerSide ? `Match Challenge (${incomingChallenge.amount} SOL)` : "Select a team to match"}
@@ -326,15 +404,35 @@ export default function Home() {
                   <button
                     disabled={(!wagerSide && wallet !== "") || wagerStatus === "creating"}
                     className="submit"
-                    onClick={() => {
+                    onClick={async () => {
                       if (!wallet) return connectWallet();
+                      if (!provider) return alert("Wallet not connected completely");
                       setWagerStatus("creating");
-                      setTimeout(() => {
+                      try {
+                        const program = new Program(idl as Idl, provider);
+                        const fixtureIdBN = new BN(selectedFixtureId!);
+                        const stakeLamports = new BN(parseFloat(stakeAmount) * 1e9);
+
+                        const [escrowPDA] = getChallengePDA(provider.wallet.publicKey, selectedFixtureId!);
+
+                        await program.methods
+                          .initializeChallenge(fixtureIdBN, wagerSide!, stakeLamports)
+                          .accounts({
+                            challengeEscrow: escrowPDA,
+                            creator: provider.wallet.publicKey,
+                            systemProgram: SystemProgram.programId,
+                          } as any)
+                          .rpc();
+
                         setWagerStatus("locked");
                         // Generate shareable link
-                        const payload = btoa(encodeURIComponent(JSON.stringify({ fixtureId: selectedFixtureId, creator: wallet ? shorten(wallet) : "0xGuest", side: wagerSide, amount: stakeAmount })));
+                        const payload = btoa(encodeURIComponent(JSON.stringify({ fixtureId: selectedFixtureId, creator: wallet, side: wagerSide, amount: stakeAmount })));
                         setInviteLink(`${window.location.origin}${window.location.pathname}?challenge=${payload}`);
-                      }, 1500);
+                      } catch (err: any) {
+                        console.error("Init error:", err);
+                        setWagerStatus("idle");
+                        alert("Transaction failed: " + err.message);
+                      }
                     }}
                   >
                     {wagerStatus === "creating" ? "Approving Transaction..." : !wallet ? "Connect Wallet to Challenge" : wagerSide ? `Lock ${stakeAmount} SOL on ${wagerSide}` : "Select a team to challenge"}
@@ -363,7 +461,36 @@ export default function Home() {
               )}
 
             </div>
-            <aside className="event-card"><div className="card-top"><span className="label">VERIFIED TIMELINE</span><div>{streamState === "demo" && <button onClick={simulateMatch} style={{ background: '#0B1849', color: '#F1DEC4', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer', marginRight: '8px' }}>▶ SIMULATE</button>}<span className="verified">✦ signed</span></div></div>{events.length > 0 ? events.map((event, index) => <div className="event" key={`${event.minute}-${index}`}><time>{event.minute}</time><span className={`event-icon ${event.team}`}>{event.title === "GOAL" ? "⚽" : event.title === "Yellow card" ? "▰" : "·"}</span><div><b>{event.title}</b><p>{event.detail}</p>{event.seq && <button onClick={() => liveMatch && validateProof(liveMatch.FixtureId, event.seq)} className="verify-btn" style={{ fontSize: '10px', padding: '2px 6px', marginTop: '4px', background: '#242625', border: '1px solid #3d423e', color: '#a7e1b5', borderRadius: '4px', cursor: 'pointer' }}>{validating ? 'Validating...' : 'Verify On-Chain ↗'}</button>}</div></div>) : <div className="event"><p>No live data yet.</p></div>}</aside>
+            <aside className="event-card">
+              <div className="card-top">
+                <span className="label">VERIFIED TIMELINE</span>
+                <div>
+                  {streamState === "demo" && <button onClick={simulateMatch} style={{ background: '#0B1849', color: '#F1DEC4', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer', marginRight: '8px' }}>▶ SIMULATE</button>}
+                  <span className="verified">✦ signed</span>
+                </div>
+              </div>
+              {events.length > 0 ? events.map((event, index) => {
+                const homeName = liveMatch?.Participant1IsHome ? liveMatch?.Participant1 : liveMatch?.Participant2;
+                const awayName = liveMatch?.Participant1IsHome ? liveMatch?.Participant2 : liveMatch?.Participant1;
+                const teamName = event.team === "home" ? homeName : event.team === "away" ? awayName : "";
+                
+                return (
+                  <div className="event" key={`${event.minute}-${index}`}>
+                    <time>{event.minute}</time>
+                    <span className={`event-icon ${event.team}`}>{event.title === "GOAL" ? "⚽" : event.title === "Yellow card" ? "▰" : "·"}</span>
+                    <div>
+                      <b>{event.title}</b>
+                      <p>
+                        {teamName && <span style={{ color: event.team === 'home' ? '#108d61' : '#4c87c2', fontWeight: '900' }}>{teamName}</span>}
+                        {teamName ? ' • ' : ''}{event.detail}
+                      </p>
+                    </div>
+                  </div>
+                );
+              }) : (
+                <div className="event"><p>No live data yet.</p></div>
+              )}
+            </aside>
           </div>
 
           {proofData && (
@@ -440,5 +567,5 @@ export default function Home() {
 }
 
 declare global {
-  interface Window { phantom?: { solana?: { isPhantom?: boolean; connect: () => Promise<{ publicKey: { toString: () => string } }> } } }
+  interface Window { phantom?: { solana?: { isPhantom?: boolean; connect: (args?: { onlyIfTrusted?: boolean }) => Promise<{ publicKey: { toString: () => string } }> } } }
 }
