@@ -1,6 +1,6 @@
 # ✦ TxLIVE
 
-**Winner-takes-all, peer-to-peer sports predictions powered by Solana Smart Contracts and the TxLINE Oracle.**
+**Winner-takes-all, peer-to-peer sports predictions powered by Solana and the TxLINE Oracle.**
 
 *Built for the TxODDS World Cup Hackathon 2026.*
 
