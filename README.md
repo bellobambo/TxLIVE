@@ -30,7 +30,8 @@ The core of TxLIVE relies on **TxLINE** by TxODDS. The platform uses TxLINE's cr
 - **Frontend Framework:** Next.js 16.2 (React)
 - **Styling:** Vanilla CSS (Custom Design System & Theme Tokens)
 - **Oracle / Data Feed:** TxLINE by TxODDS (Real-time SSE & REST Snapshot)
-- **Blockchain:** Solana (Simulated Escrow Logic for Demo)
+- **Blockchain:** Solana (Anchor Smart Contract deployed on Devnet)
+- **Smart Contract Repo:** [bellobambo/txlive-smartcontract](https://github.com/bellobambo/txlive-smartcontract)
 - **Assets:** FlagCDN for native team flags
 
 ## 🚀 Getting Started
@@ -51,12 +52,13 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## 🧪 Testing the Flow (Golden Path)
 
-1. Click **Connect Wallet** in the top right.
+1. Click **Connect Wallet** in the top right to connect your Phantom wallet.
 2. Scroll to the **FEATURED MATCH** or click **Fixtures** to select an upcoming game.
-3. Choose a team and click **Lock SOL**. 
+3. Choose a team and click **Lock SOL**. Approve the transaction to initialize the challenge on-chain.
 4. Copy the generated invite link and open it in an Incognito Window (or send it to a friend).
-5. In the new window, click **Match Challenge** to lock the opposing side.
+5. In the new window, click **Match Challenge** to lock the opposing side and approve the transaction.
 6. Check the **Verified Timeline** on the dashboard to view the TxLINE Merkle proofs!
+7. Once the match is locked, click the **Claim Winnings** button to simulate the oracle resolution and immediately withdraw the doubled SOL amount from the escrow!
 
 ---
-*Disclaimer: The current build utilizes a frontend-mocked escrow contract for hackathon demonstration purposes. The architecture is designed to be directly plugged into a deployed Anchor/Solana program.*
+**View the full Smart Contract source code here:** [https://github.com/bellobambo/txlive-smartcontract](https://github.com/bellobambo/txlive-smartcontract)

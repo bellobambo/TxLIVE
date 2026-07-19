@@ -308,6 +308,40 @@ export default function Home() {
                       <button onClick={() => { navigator.clipboard.writeText(inviteLink); alert("Invite link copied!"); }} style={{ width: '100%', padding: '8px', background: '#F1DEC4', color: '#0B1849', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Copy Link</button>
                     </div>
                   ) : null}
+                  
+                  <button
+                    className="submit"
+                    style={{ background: '#a7e1b5', color: '#0B1849', marginTop: '15px' }}
+                    onClick={async () => {
+                      if (!provider) return alert("Wallet not connected completely");
+                      try {
+                        const program = new Program(idl as Idl, provider);
+                        let escrowPDA;
+                        if (incomingChallenge) {
+                          const creatorPubkey = new PublicKey(incomingChallenge.creator);
+                          [escrowPDA] = getChallengePDA(creatorPubkey, incomingChallenge.fixtureId);
+                        } else {
+                          [escrowPDA] = getChallengePDA(provider.wallet.publicKey, selectedFixtureId!);
+                        }
+
+                        await program.methods.resolveChallenge(wagerSide!).accounts({ challengeEscrow: escrowPDA } as any).rpc();
+
+                        await program.methods.claimWinnings().accounts({
+                          challengeEscrow: escrowPDA, claimer: provider.wallet.publicKey, destination: provider.wallet.publicKey
+                        } as any).rpc();
+
+                        alert("Winnings claimed successfully!");
+                        setWagerStatus("idle");
+                        if (incomingChallenge) setIncomingChallenge(null);
+                        else setInviteLink(null);
+                      } catch (err: any) {
+                        console.error("Claim error:", err);
+                        alert("Transaction failed: " + err.message);
+                      }
+                    }}
+                  >
+                    Claim Winnings
+                  </button>
                 </div>
               ) : incomingChallenge ? (
                 <div className="incoming-challenge" style={{ background: '#0B1849', color: '#F1DEC4', padding: '15px', borderRadius: '8px', border: '2px solid #F1DEC4' }}>
