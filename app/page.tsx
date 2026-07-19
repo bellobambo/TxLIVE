@@ -85,7 +85,7 @@ export default function Home() {
       const challengeToken = params.get("challenge");
       if (challengeToken) {
         try {
-          const parsed = JSON.parse(atob(challengeToken));
+          const parsed = JSON.parse(decodeURIComponent(escape(atob(challengeToken))));
           setIncomingChallenge(parsed);
           setSelectedFixtureId(parsed.fixtureId);
           setCurrentView("dashboard");
@@ -332,7 +332,7 @@ export default function Home() {
                       setTimeout(() => {
                         setWagerStatus("locked");
                         // Generate shareable link
-                        const payload = btoa(JSON.stringify({ fixtureId: selectedFixtureId, creator: wallet ? shorten(wallet) : "0xGuest", side: wagerSide, amount: stakeAmount }));
+                        const payload = btoa(unescape(encodeURIComponent(JSON.stringify({ fixtureId: selectedFixtureId, creator: wallet ? shorten(wallet) : "0xGuest", side: wagerSide, amount: stakeAmount }))));
                         setInviteLink(`${window.location.origin}${window.location.pathname}?challenge=${payload}`);
                       }, 1500);
                     }}
